@@ -27,7 +27,6 @@ var (
 	Issuers               []string     = []string{"accounts.google.com", "https://accounts.google.com"}
 	downloadCertsTaskDone chan interface{}
 	cachedCerts           *Certs
-
 	ErrInvalidIssuer   = errors.New("Token is not valid, ISS from token and certificate don't match")
 	ErrInvalidAudience = errors.New("Token is not valid, Audience from token and certificate don't match")
 	ErrInvalidEmail    = errors.New("Token is not valid, Email from token and certificate don't match")
@@ -146,47 +145,6 @@ func Close() {
 	close(downloadCertsTaskDone)
 }
 
-func IssuerValidator() Validator {
-	return func(tokeninfo *TokenInfo) error {
-		issValid := false
-		for _, iss := range Issuers {
-			issValid = issValid || (tokeninfo.Iss == iss)
-		}
-		if !issValid {
-			return ErrInvalidIssuer
-		}
-		return nil
-	}
-}
-
-func AudienceValidator(audience string) Validator {
-
-	return func(tokeninfo *TokenInfo) error {
-		log.Println(audience != tokeninfo.Aud)
-		if audience != tokeninfo.Aud {
-			return ErrInvalidAudience
-		}
-		return nil
-	}
-}
-
-func EmailValidator(email string) Validator {
-	return func(tokeninfo *TokenInfo) error {
-		if email != tokeninfo.Email {
-			return ErrInvalidEmail
-		}
-		return nil
-	}
-}
-
-func ExpireValidator() Validator {
-	return func(tokeninfo *TokenInfo) error {
-		if !checkTime(tokeninfo) {
-			return ErrTokenExpired
-		}
-		return nil
-	}
-}
 
 // Verify
 func Verify(authToken string, validators ...Validator) (*TokenInfo, error) {
