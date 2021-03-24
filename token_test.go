@@ -1,61 +1,57 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"fmt"
 )
 
 func Test_AudienceValidator(t *testing.T) {
-	SetIssuers([]string{"http://127.0.0.1:5556/dex"})
-	SetJwksUri("http://127.0.0.1:5556/dex/keys")
 
-	authToken := "eyJhbGciOiJSUzI1NiIsImtpZCI6ImVlMGNjZjk5YjkyNzg1YzZkMDgxYTVhMzFlZjZhMzExZjE2NTExNjgifQ.eyJpc3MiOiJodHRwOi8vMTI3LjAuMC4xOjU1NTYvZGV4Iiwic3ViIjoiQ2lOamJqMXFZVzVsTEc5MVBWQmxiM0JzWlN4a1l6MWxlR0Z0Y0d4bExHUmpQVzl5WnhJRWJHUmhjQSIsImF1ZCI6ImV4YW1wbGUtYXBwIiwiZXhwIjoxNjE2NTU1Mjc2LCJpYXQiOjE2MTY0Njg4NzYsImF6cCI6ImV4YW1wbGUtYXBwIiwiYXRfaGFzaCI6IlQ2am1ta3BZZFNqV3ZCb1EyR0xORWciLCJlbWFpbCI6ImphbmVkb2VAZXhhbXBsZS5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmFtZSI6ImphbmUifQ.sFDeZnTWsHvRo6m8qqOS-bDtO1ZZ0cADogcAJTZX90sdP5HY6XdkGnm4FBD6BqKiKsTaIudTgJq9mJSFFcACRHv_Lpb0OSu4rS3HtbgiQhXJvQDNTWcXx3sqLC-SWfVwBCEzGA3WVNw1odA3lBQXvGcanCC1QPTqq9opqOIhmBPUx_p4vWB1R08owFPRyBSQBKeGT66SRva89uqe-CP1dzFHNBHvDkgMuS607QraOWQ43wczR7xg5Apm1GYW9f5drR1rZaLDOnt2xl58pDLMnpIbgCmqr9_pGiNmIujx_03A-32oK4PHzvLlwy0GwAXMUjcehuv-GDUpnh7-B_rj4A"
+	verifier := NewVerifier("http://127.0.0.1:5556/dex/keys", "http://127.0.0.1:5556/dex", "http://127.0.0.1:5557/dex")
+	verifier.init()
+	authToken := "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijc3M2M2MmQ5ZDhlYWI4NzEzODE1Y2QzNmFlZDdhZTFkNTM3NjY4MGMifQ.eyJpc3MiOiJodHRwOi8vMTI3LjAuMC4xOjU1NTYvZGV4Iiwic3ViIjoiQ2lOamJqMXFZVzVsTEc5MVBWQmxiM0JzWlN4a1l6MWxlR0Z0Y0d4bExHUmpQVzl5WnhJRWJHUmhjQSIsImF1ZCI6ImV4YW1wbGUtYXBwIiwiZXhwIjoxNjE2NjQ0OTMzLCJpYXQiOjE2MTY1NTg1MzMsImF0X2hhc2giOiJJSG1rTjZ2MFBNUnc4Snk1Z05GYkxnIiwiZW1haWwiOiJqYW5lZG9lQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJqYW5lIn0.Y7SB8po-e88C_3nz9huzYFYuqzJ7wWFqN88F8Seh1VPTCEj-TktifG9guPGm2EaG5uCyDUWM3LyOwEE7yIoMcwFMm_vTQONuAaNeiCKIdxB-k-C771cBaxdZgaO_vgd5JgWPCFiGKWyOu80FRIen0_uDjPFidj5JyupTTOk9_2384MXFnoTln4vB1tMoZy1sMrX9gaSyGrPAKEsNrTmR3Hyi0ldFwy4GT4L30rRgpiP_eGdCN0PtJuTlTK9y2RaGcdttX2aZak_IkLuknS1PrzNb4BqtDRmDOFCxbkKIyuGYHmg5cDCniGl-R3Yj42aFgjsA_E8tZIcwl3p_BS3N-g"
 	aud := "example-app"
 
-	validator := AudienceValidator(aud)
+	actual, err := verifier.Verify(authToken)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, aud, actual.Aud)
 
-	actual, err := Verify(authToken, validator)
-
-	assert.Equal(t, err, nil)
-	assert.Equal(t, actual.Iss, "http://127.0.0.1:5556/dex")
+	defer verifier.Close()
+	//assert.Equal(t, actual.Iss, "http://127.0.0.1:5556/dex")
 }
 
-func TestCheckDexToken_ErrWhenGetCerts(t *testing.T) {
-	SetIssuers([]string{"http://127.0.0.1:5556/dex"})
-	SetJwksUri("http://127.0.0.1:5556/dex/keys")
-	var token *TokenInfo
-	authToken := "eyJhbGciOiJSUzI1NiIsImtpZCI6ImVlMGNjZjk5YjkyNzg1YzZkMDgxYTVhMzFlZjZhMzExZjE2NTExNjgifQ.eyJpc3MiOiJodHRwOi8vMTI3LjAuMC4xOjU1NTYvZGV4Iiwic3ViIjoiQ2lOamJqMXFZVzVsTEc5MVBWQmxiM0JzWlN4a1l6MWxlR0Z0Y0d4bExHUmpQVzl5WnhJRWJHUmhjQSIsImF1ZCI6ImV4YW1wbGUtYXBwIiwiZXhwIjoxNjE2NTU1Mjc2LCJpYXQiOjE2MTY0Njg4NzYsImF6cCI6ImV4YW1wbGUtYXBwIiwiYXRfaGFzaCI6IlQ2am1ta3BZZFNqV3ZCb1EyR0xORWciLCJlbWFpbCI6ImphbmVkb2VAZXhhbXBsZS5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmFtZSI6ImphbmUifQ.sFDeZnTWsHvRo6m8qqOS-bDtO1ZZ0cADogcAJTZX90sdP5HY6XdkGnm4FBD6BqKiKsTaIudTgJq9mJSFFcACRHv_Lpb0OSu4rS3HtbgiQhXJvQDNTWcXx3sqLC-SWfVwBCEzGA3WVNw1odA3lBQXvGcanCC1QPTqq9opqOIhmBPUx_p4vWB1R08owFPRyBSQBKeGT66SRva89uqe-CP1dzFHNBHvDkgMuS607QraOWQ43wczR7xg5Apm1GYW9f5drR1rZaLDOnt2xl58pDLMnpIbgCmqr9_pGiNmIujx_03A-32oK4PHzvLlwy0GwAXMUjcehuv-GDUpnh7-B_rj4A"
-	aud := "example-app"
+func Test_With_CustomCerts(t *testing.T) {
+	verifier := NewVerifier("http://127.0.0.1:5556/dex/keys1", "http://127.0.0.1:5556/dex", "http://127.0.0.1:5557/dex")
+	//verifier.init()
 
-	validator := AudienceValidator(aud)
-	actual, err := Verify(authToken, validator)
-	if err != nil {
-		fmt.Println(err)
+	certStr := `
+{
+"keys": [
+{
+"use": "sig",
+"kty": "RSA",
+"kid": "773c62d9d8eab8713815cd36aed7ae1d5376680c",
+"alg": "RS256",
+"n": "2G6CjW5JooPevM2UDd_dE9EMzQEJXeJyau6F7sM_7j9wdiOMJubCrYX0DZ4mpgQlfdL1OeNOUqcLDaAutZ16SFCIMSpArluqb5O63h8s50KORO7Gpoh7PIuepF2RlO2T47VRfy8NxN2L_EXFf8UuLuGd65xVbfarxtSnvvmP7LtwxC8E-MqC3OmdEYCpjjDUCtAJi1EUpI77VTOGGmdoThxAOOIDWYf00N7qqQ1SIBjauDFHN89KiYN5OE6Fbcgkdj6TtZG2UfPbXBgl5woo1cwpKc764zYzWIO-DKjR_4JFWgKdikFgVCqt1hS2vUCOunN2l1fVY8DqND1daXkn1w",
+"e": "AQAB"
+}
+]
+}`
+	var cert Certs
+
+	json.Unmarshal([]byte(certStr), &cert)
+
+	for _, key := range cert.Keys {
+		key.init()
 	}
-	assert.Equal(t, actual, token)
-}
 
-//func TestCheckDexToken_InvalidIssuer(t *testing.T) {
-//	tv := TokenVerifier{
-//		JwksUri: "http://127.0.0.1:5556/dex/keys",
-//		Issuers: []string{"http://127.0.0.1:5556/dex1"},
-//	}
-//	authToken := "eyJhbGciOiJSUzI1NiIsImtpZCI6ImVlMGNjZjk5YjkyNzg1YzZkMDgxYTVhMzFlZjZhMzExZjE2NTExNjgifQ.eyJpc3MiOiJodHRwOi8vMTI3LjAuMC4xOjU1NTYvZGV4Iiwic3ViIjoiQ2lOamJqMXFZVzVsTEc5MVBWQmxiM0JzWlN4a1l6MWxlR0Z0Y0d4bExHUmpQVzl5WnhJRWJHUmhjQSIsImF1ZCI6ImV4YW1wbGUtYXBwIiwiZXhwIjoxNjE2NTU1Mjc2LCJpYXQiOjE2MTY0Njg4NzYsImF6cCI6ImV4YW1wbGUtYXBwIiwiYXRfaGFzaCI6IlQ2am1ta3BZZFNqV3ZCb1EyR0xORWciLCJlbWFpbCI6ImphbmVkb2VAZXhhbXBsZS5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmFtZSI6ImphbmUifQ.sFDeZnTWsHvRo6m8qqOS-bDtO1ZZ0cADogcAJTZX90sdP5HY6XdkGnm4FBD6BqKiKsTaIudTgJq9mJSFFcACRHv_Lpb0OSu4rS3HtbgiQhXJvQDNTWcXx3sqLC-SWfVwBCEzGA3WVNw1odA3lBQXvGcanCC1QPTqq9opqOIhmBPUx_p4vWB1R08owFPRyBSQBKeGT66SRva89uqe-CP1dzFHNBHvDkgMuS607QraOWQ43wczR7xg5Apm1GYW9f5drR1rZaLDOnt2xl58pDLMnpIbgCmqr9_pGiNmIujx_03A-32oK4PHzvLlwy0GwAXMUjcehuv-GDUpnh7-B_rj4A"
-//	aud := "example-app"
-//	actual := tv.Verify(authToken, aud)
-//	var token *TokenInfo
-//	assert.Equal(t, actual, token)
-//}
-//
-//func TestCheckGoogleToken_InvalidIssuer(t *testing.T) {
-//	tv := TokenVerifier{
-//		JwksUri: "https://www.googleapis.com/oauth2/v3/certs",
-//		Issuers: []string{"https://accounts.google.com"},
-//	}
-//	authToken := "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijg0NjJhNzFkYTRmNmQ2MTFmYzBmZWNmMGZjNGJhOWMzN2Q2NWU2Y2QiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIzNjMxMDc5ODc4ODYtOXZmbWtsOWpvaGhyN2tobnQwamZhNjhwanJrMGtqZjcuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiIzNjMxMDc5ODc4ODYtOXZmbWtsOWpvaGhyN2tobnQwamZhNjhwanJrMGtqZjcuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMTIwMTA2OTA3MjIyMjU2NTMyMDgiLCJlbWFpbCI6ImJsYWNrcHJlc2lkZW50OTBAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImF0X2hhc2giOiJWendiV2xScWtWbzhaYjBPQURtaXJRIiwiaWF0IjoxNjE1NTMzMDYxLCJleHAiOjE2MTU1MzY2NjF9.VY4EBQsfOm0fwSpkrUU5mY4MPz9DTik8U0JDLDWf8sVTji1v1lp4Cs0krAkUVZaEe3Wip0aMTcnz2AvdtCydNzZKqw_nxq5LYBKDZbBRd7iuL6I2EdBbFWLEJrTGnCpMtw99OqVrTT4DNLsN5cVbQv_dzhZztk2-VpFI6hR9UaerE4J0xwEZV30GF-4keXROpsxUr1zYVxLJCjSifHnMFtve3LrQAC_AYI0x6fKrJhcT7wVXFHJp22XHXrCYDRtuHDSOqmhIoUKmaOyepaSc4xVPNZfKq8OUgQDYdQG8AW76r7M83NwPlnECai0vGvND4t9N81gVjzxrai-qCRcg_g"
-//	aud := "363107987886-9vfmkl9johhr7khnt0jfa68pjrk0kjf7.apps.googleusercontent.com"
-//	actual := tv.Verify(authToken, aud)
-//	var token *TokenInfo
-//	assert.Equal(t, actual, token)
-//}
+	verifier.AddCertsToCache(cert)
+	authToken := "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijc3M2M2MmQ5ZDhlYWI4NzEzODE1Y2QzNmFlZDdhZTFkNTM3NjY4MGMifQ.eyJpc3MiOiJodHRwOi8vMTI3LjAuMC4xOjU1NTYvZGV4Iiwic3ViIjoiQ2lOamJqMXFZVzVsTEc5MVBWQmxiM0JzWlN4a1l6MWxlR0Z0Y0d4bExHUmpQVzl5WnhJRWJHUmhjQSIsImF1ZCI6ImV4YW1wbGUtYXBwIiwiZXhwIjoxNjE2NjQ0OTMzLCJpYXQiOjE2MTY1NTg1MzMsImF0X2hhc2giOiJJSG1rTjZ2MFBNUnc4Snk1Z05GYkxnIiwiZW1haWwiOiJqYW5lZG9lQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJqYW5lIn0.Y7SB8po-e88C_3nz9huzYFYuqzJ7wWFqN88F8Seh1VPTCEj-TktifG9guPGm2EaG5uCyDUWM3LyOwEE7yIoMcwFMm_vTQONuAaNeiCKIdxB-k-C771cBaxdZgaO_vgd5JgWPCFiGKWyOu80FRIen0_uDjPFidj5JyupTTOk9_2384MXFnoTln4vB1tMoZy1sMrX9gaSyGrPAKEsNrTmR3Hyi0ldFwy4GT4L30rRgpiP_eGdCN0PtJuTlTK9y2RaGcdttX2aZak_IkLuknS1PrzNb4BqtDRmDOFCxbkKIyuGYHmg5cDCniGl-R3Yj42aFgjsA_E8tZIcwl3p_BS3N-g"
+	aud := "example-app"
+	actual, err := verifier.VerifyWithValidator(authToken)
+	assert.Nil(t, err)
+	assert.Equal(t, aud, actual.Aud)
+	defer verifier.Close()
+
+}

@@ -10,31 +10,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/joho/godotenv"
 	"io"
-	"io/ioutil"
-	"log"
 	"math/big"
-	"net/http"
-	"os"
 	"strings"
 	"time"
 )
-
 var (
-	httpClient            *http.Client = http.DefaultClient
-	JwksUri               string       = "https://www.googleapis.com/oauth2/v3/certs"
-	Issuers               []string     = []string{"accounts.google.com", "https://accounts.google.com"}
-	downloadCertsTaskDone chan interface{}
-	cachedCerts           *Certs
-	ErrInvalidIssuer   = errors.New("Token is not valid, ISS from token and certificate don't match")
-	ErrInvalidAudience = errors.New("Token is not valid, Audience from token and certificate don't match")
-	ErrInvalidEmail    = errors.New("Token is not valid, Email from token and certificate don't match")
-	ErrTokenExpired    = errors.New("Token is not valid, Token is expired.")
-	ErrInvalidKid      = errors.New("Token is not valid, kid from token and certificate don't match")
-)
 
-type Validator func(*TokenInfo) error
+	ErrInvalidIssuer      = errors.New("Token is not valid, ISS from token and certificate don't match")
+	ErrInvalidAudience    = errors.New("Token is not valid, Audience from token and certificate don't match")
+	ErrInvalidSubject    = errors.New("Token is not valid, Subject from token and certificate don't match")
+	ErrInvalidEmail       = errors.New("Token is not valid, Email from token and certificate don't match")
+	ErrTokenExpired       = errors.New("Token is not valid, Token is expired.")
+	ErrInvalidKid         = errors.New("Token is not valid, kid from token and certificate don't match")
+)
 
 // Certs is
 type Certs struct {
@@ -73,85 +62,6 @@ type TokenInfo struct {
 // https://developers.google.com/identity/sign-in/web/backend-auth
 // https://github.com/google/oauth2client/blob/master/oauth2client/crypt.py
 
-func init() {
-	if err := godotenv.Load(); err != nil {
-		log.Print("No .env file found")
-	}
-
-	jwksUri := os.Getenv("IDP_JWKSURI")
-	rawIssuers := os.Getenv("IDP_ISSUSERS")
-
-	issusers := strings.Split(rawIssuers, ",")
-
-	SetJwksUri(jwksUri)
-	SetIssuers(issusers)
-	if err := downloadCerts(); err != nil {
-		panic(fmt.Errorf("download token cert failed, err is %v", err))
-	}
-
-	go func() {
-		ticker := time.NewTicker(time.Minute * 10)
-		for {
-			select {
-			case <-ticker.C:
-				downloadCerts()
-			case <-downloadCertsTaskDone:
-				return
-			}
-		}
-	}()
-}
-
-func downloadCerts() error {
-	data, err := GetCertsFromURL()
-	if err != nil {
-		return err
-	}
-
-	certs, err := GetCerts(data)
-	if err != nil {
-		return err
-	}
-
-	cachedCerts = certs
-	return nil
-}
-
-func SetHttpClient(hc *http.Client) {
-	if hc == nil {
-		hc = http.DefaultClient
-		return
-	}
-	httpClient = hc
-}
-
-func SetJwksUri(uri string) {
-	if uri == "" {
-		JwksUri = "https://www.googleapis.com/oauth2/v3/certs"
-		return
-	}
-	JwksUri = uri
-}
-
-func SetIssuers(issuers []string) {
-	if len(issuers) <= 0 {
-		Issuers = []string{"accounts.google.com", "https://accounts.google.com"}
-		return
-	}
-	Issuers = issuers
-}
-
-func Close() {
-	close(downloadCertsTaskDone)
-}
-
-
-// Verify
-func Verify(authToken string, validators ...Validator) (*TokenInfo, error) {
-	return VerifyJwtToken(authToken, cachedCerts, validators...)
-}
-
-// VerifyJwtToken is
 func VerifyJwtToken(authToken string, certs *Certs, validators ...Validator) (tokeninfo *TokenInfo, err error) {
 	header, payload, signature, messageToSign := divideAuthToken(authToken)
 
@@ -187,21 +97,6 @@ func checkTime(tokeninfo *TokenInfo) bool {
 		return false
 	}
 	return true
-}
-
-//GetCertsFromURL is
-func GetCertsFromURL() ([]byte, error) {
-	res, err := httpClient.Get(JwksUri)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("download certs failed, status is %d", res.StatusCode)
-	}
-	defer res.Body.Close()
-
-	return ioutil.ReadAll(res.Body)
 }
 
 //GetCerts is
