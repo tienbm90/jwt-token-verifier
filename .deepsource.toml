@@ -1,10 +1,9 @@
 version = 1
 
-test_patterns = ["*.go"]
-
 [[analyzers]]
 name = "go"
 enabled = true
 
   [analyzers.meta]
   import_paths = ["github.com/tienbm90/jwt-token-verifier"]
+  dependencies_vendored = true
