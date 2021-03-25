@@ -168,7 +168,7 @@ func (v *Verifier) VerifyJwtToken(authToken string, certs *Certs) (tokeninfo *To
 	return
 }
 
-func (v *Verifier) init() {
+func (v *Verifier) Init() {
 	if err := v.downloadCerts(v.JwksUri); err != nil {
 		if v.cachedCerts != nil {
 			panic(fmt.Errorf("download token cert failed, err is %v", err))
