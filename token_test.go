@@ -1,4 +1,4 @@
-package main
+package verifier
 
 import (
 	"encoding/json"

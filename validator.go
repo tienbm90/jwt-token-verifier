@@ -1,4 +1,4 @@
-package main
+package verifier
 
 type (
 	Validator func(*TokenInfo) error

@@ -1,9 +1,9 @@
-package main
+package verifier
 
 import (
 	"crypto/rsa"
+	"errors"
 	"fmt"
-	"github.com/oauth2/errors"
 	"io/ioutil"
 	"net/http"
 	"time"
